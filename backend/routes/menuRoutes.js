@@ -17,6 +17,8 @@ router.post('/', async (req, res) => {
   const menuItem = new MenuItem({
     itemNumber: req.body.itemNumber,
     name: req.body.name,
+    name_ne: req.body.name_ne,
+    name_ja: req.body.name_ja,
     price: req.body.price,
     imageUrl: req.body.imageUrl,
     category: req.body.category,

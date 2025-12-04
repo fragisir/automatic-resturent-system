@@ -6,6 +6,9 @@ import { getMenu, placeOrder, api } from '@/lib/api';
 import io from 'socket.io-client';
 import LoadingOverlay from '@/components/LoadingOverlay';
 import ThankYouOverlay from '@/components/ThankYouOverlay';
+import CallStaffButton from '@/components/CallStaffButton';
+import { listenToTableCall, StaffCall } from '@/lib/firebase';
+import { useToast } from '@/context/ToastContext';
 
 const socket = io(process.env.NEXT_PUBLIC_BACKEND_URL?.replace('/api', '') || 'http://localhost:5000', {
   transports: ['websocket', 'polling'],
@@ -18,10 +21,72 @@ interface MenuItem {
   _id: string;
   itemNumber: number;
   name: string;
+  name_ne?: string;
+  name_ja?: string;
   price: number;
   imageUrl?: string;
   category: string;
 }
+
+const translations = {
+  en: {
+    cart: 'Cart',
+    addToCart: 'Add to Cart',
+    placeOrder: 'Place Order',
+    total: 'Total',
+    orderStatus: 'Order Status',
+    yourFoodIsReady: '✨ Your food is ready!',
+    cancelOrder: 'Cancel Order',
+    tableReserved: 'Table Reserved',
+    tryAgain: 'Try Again',
+    accessDenied: 'Access Denied – Table Already Reserved',
+    sessionExpired: 'Session expired. Please refresh the page.',
+    failedToPlaceOrder: 'Failed to place order. Please try again.',
+    orderCanceled: 'Order canceled successfully.',
+    failedToCancel: 'Failed to cancel order.',
+    pleaseAddItems: 'Please add items to your cart',
+    confirmCancel: 'Cancel this order? You can place a new order after canceling.',
+    tableInUse: 'This table is currently in use. Please wait or choose another table.'
+  },
+  ne: {
+    cart: 'कार्ट',
+    addToCart: 'कार्टमा राख्नुहोस्',
+    placeOrder: 'अर्डर गर्नुहोस्',
+    total: 'जम्मा',
+    orderStatus: 'अर्डर स्थिति',
+    yourFoodIsReady: '✨ तपाईंको खाना तयार छ!',
+    cancelOrder: 'अर्डर रद्द गर्नुहोस्',
+    tableReserved: 'टेबल आरक्षित छ',
+    tryAgain: 'फेरि प्रयास गर्नुहोस्',
+    accessDenied: 'प्रवेश अस्वीकृत - टेबल पहिले नै आरक्षित छ',
+    sessionExpired: 'सत्र समाप्त भयो। कृपया पृष्ठ रिफ्रेस गर्नुहोस्।',
+    failedToPlaceOrder: 'अर्डर गर्न असफल। कृपया फेरि प्रयास गर्नुहोस्।',
+    orderCanceled: 'अर्डर सफलतापूर्वक रद्द गरियो।',
+    failedToCancel: 'अर्डर रद्द गर्न असफल।',
+    pleaseAddItems: 'कृपया कार्टमा सामानहरू थप्नुहोस्',
+    confirmCancel: 'यो अर्डर रद्द गर्ने हो? रद्द गरेपछि तपाईं नयाँ अर्डर गर्न सक्नुहुन्छ।',
+    tableInUse: 'यो टेबल हाल प्रयोगमा छ। कृपया पर्खनुहोस् वा अर्को टेबल छान्नुहोस्।'
+  },
+  ja: {
+    cart: 'カート',
+    addToCart: 'カートに追加',
+    placeOrder: '注文する',
+    total: '合計',
+    orderStatus: '注文状況',
+    yourFoodIsReady: '✨ お食事ができました！',
+    cancelOrder: '注文をキャンセル',
+    tableReserved: '予約済み',
+    tryAgain: '再試行',
+    accessDenied: 'アクセス拒否 - テーブルは既に予約されています',
+    sessionExpired: 'セッションが期限切れです。ページを更新してください。',
+    failedToPlaceOrder: '注文に失敗しました。もう一度お試しください。',
+    orderCanceled: '注文が正常にキャンセルされました。',
+    failedToCancel: '注文のキャンセルに失敗しました。',
+    pleaseAddItems: 'カートに商品を追加してください',
+    confirmCancel: 'この注文をキャンセルしますか？キャンセル後に新しい注文を行えます。',
+    tableInUse: 'このテーブルは現在使用中です。お待ちいただくか、別のテーブルをお選びください。'
+  }
+};
 
 interface CartItem extends MenuItem {
   quantity: number;
@@ -56,6 +121,31 @@ function OrderContent() {
   const [isTableReserved, setIsTableReserved] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
   const [showCart, setShowCart] = useState(false);
+  const [staffCall, setStaffCall] = useState<StaffCall | null>(null);
+  const [language, setLanguage] = useState<'en' | 'ne' | 'ja' | null>(null);
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    // Check session storage first (for page reloads)
+    const savedLang = sessionStorage.getItem('orderLanguage');
+    if (savedLang) {
+      setLanguage(savedLang as 'en' | 'ne' | 'ja');
+    }
+  }, []);
+
+  const handleSetLanguage = (lang: 'en' | 'ne' | 'ja') => {
+    setLanguage(lang);
+    sessionStorage.setItem('orderLanguage', lang);
+    showToast(lang === 'ne' ? 'भाषा नेपालीमा परिवर्तन गरियो' : lang === 'ja' ? '言語が日本語に変更されました' : 'Language set to English', 'success');
+  };
+
+  const t = language ? translations[language] : translations['en'];
+
+  const getLocalizedName = (item: MenuItem | CartItem) => {
+    if (language === 'ne' && item.name_ne) return item.name_ne;
+    if (language === 'ja' && item.name_ja) return item.name_ja;
+    return item.name;
+  };
 
   useEffect(() => {
     socket.on('connect', () => console.log('✅ Socket connected:', socket.id));
@@ -168,6 +258,23 @@ function OrderContent() {
     return () => clearInterval(interval);
   }, [expiresAt, sessionId, table, isTableReserved]);
 
+  // Listen for staff calls
+  useEffect(() => {
+    if (!table) return;
+
+    const unsubscribe = listenToTableCall(
+      parseInt(table), 
+      (call) => {
+        setStaffCall(call);
+      },
+      (error) => {
+        console.error("Error listening to table call:", error);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [table]);
+
   const categories = useMemo(() => {
     const cats = ['All', ...Array.from(new Set(menu.map(item => item.category)))];
     return cats;
@@ -186,6 +293,7 @@ function OrderContent() {
       }
       return [...prev, { ...item, quantity }];
     });
+    showToast(`Added ${getLocalizedName(item)} to cart`, 'success');
   };
 
   const updateCartQuantity = (itemId: string, quantity: number) => {
@@ -198,12 +306,12 @@ function OrderContent() {
 
   const handlePlaceOrder = async () => {
     if (cart.length === 0) {
-      alert('Please add items to your cart');
+      showToast(t.pleaseAddItems, 'info');
       return;
     }
 
     if (!sessionToken) {
-      alert('Session expired. Please refresh the page.');
+      showToast(t.sessionExpired, 'error');
       return;
     }
 
@@ -224,19 +332,80 @@ function OrderContent() {
       setActiveOrder(newOrder);
       setCart([]);
       setShowCart(false);
+      showToast('Order placed successfully! 🍳', 'success');
     } catch (err: any) {
       console.error('Failed to place order:', err);
       if (err.response && err.response.status === 401) {
-        alert('Session expired. Please refresh the page.');
+        showToast(t.sessionExpired, 'error');
         window.location.reload();
       } else {
-        alert('Failed to place order. Please try again.');
+        showToast(t.failedToPlaceOrder, 'error');
       }
     }
   };
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+  if (isLoading) {
+    return <LoadingOverlay message="Refreshing your session..." />;
+  }
+
+  if (!language) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-red-50 to-orange-50 p-6 relative overflow-hidden">
+        {/* Background decoration */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+           <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-red-200/30 rounded-full blur-3xl animate-pulse"></div>
+           <div className="absolute bottom-[-10%] left-[-10%] w-96 h-96 bg-orange-200/30 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        </div>
+
+        <div className="bg-white/80 backdrop-blur-xl border border-white/50 p-8 rounded-3xl shadow-2xl w-full max-w-md text-center relative z-10 animate-in fade-in zoom-in duration-500">
+          <div className="w-24 h-24 bg-gradient-to-br from-red-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg shadow-orange-500/30">
+            <span className="text-5xl">🌐</span>
+          </div>
+          
+          <h1 className="text-4xl font-black text-gray-900 mb-3 tracking-tight">Welcome</h1>
+          <p className="text-gray-500 mb-10 text-lg">Please select your language</p>
+          
+          <div className="space-y-4">
+            <button 
+              onClick={() => handleSetLanguage('en')}
+              className="w-full bg-white hover:bg-red-50 border-2 border-gray-100 hover:border-red-500 p-4 rounded-2xl flex items-center gap-5 transition-all group hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md"
+            >
+              <span className="text-4xl drop-shadow-sm">🇺🇸</span>
+              <div className="text-left">
+                <div className="font-bold text-gray-900 text-lg group-hover:text-red-600 transition-colors">English</div>
+                <div className="text-sm text-gray-500">Select English</div>
+              </div>
+            </button>
+
+            <button 
+              onClick={() => handleSetLanguage('ne')}
+              className="w-full bg-white hover:bg-red-50 border-2 border-gray-100 hover:border-red-500 p-4 rounded-2xl flex items-center gap-5 transition-all group hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md"
+            >
+              <span className="text-4xl drop-shadow-sm">🇳🇵</span>
+              <div className="text-left">
+                <div className="font-bold text-gray-900 text-lg group-hover:text-red-600 transition-colors">नेपाली</div>
+                <div className="text-sm text-gray-500">नेपाली भाषा छान्नुहोस्</div>
+              </div>
+            </button>
+
+            <button 
+              onClick={() => handleSetLanguage('ja')}
+              className="w-full bg-white hover:bg-red-50 border-2 border-gray-100 hover:border-red-500 p-4 rounded-2xl flex items-center gap-5 transition-all group hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md"
+            >
+              <span className="text-4xl drop-shadow-sm">🇯🇵</span>
+              <div className="text-left">
+                <div className="font-bold text-gray-900 text-lg group-hover:text-red-600 transition-colors">日本語</div>
+                <div className="text-sm text-gray-500">日本語を選択</div>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isTableReserved) {
     return (
@@ -245,15 +414,15 @@ function OrderContent() {
           <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-4xl">🔒</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Table Reserved</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">{t.tableReserved}</h1>
           <p className="text-gray-600 mb-6">
-            This table is currently in use. Please wait or choose another table.
+            {t.tableInUse}
           </p>
           <button
             onClick={() => window.location.reload()}
             className="bg-red-600 text-white px-6 py-3 rounded-xl hover:bg-red-700 transition font-medium"
           >
-            Try Again
+            {t.tryAgain}
           </button>
         </div>
       </div>
@@ -273,7 +442,7 @@ function OrderContent() {
           </div>
           
           <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-2xl mb-6">
-            <div className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wider text-center">Order Status</div>
+            <div className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wider text-center">{t.orderStatus}</div>
             <div className={`text-4xl font-black text-center mb-2 ${
               activeOrder.status === 'NEW' ? 'text-yellow-500' :
               activeOrder.status === 'COOKING' ? 'text-orange-500' :
@@ -283,7 +452,7 @@ function OrderContent() {
             </div>
             {activeOrder.status === 'READY' && (
               <div className="text-center text-green-700 font-semibold text-sm animate-pulse">
-                ✨ Your food is ready!
+                {t.yourFoodIsReady}
               </div>
             )}
           </div>
@@ -293,7 +462,13 @@ function OrderContent() {
               <div key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl">
                 <div className="flex items-center gap-3">
                   <span className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-lg">{item.quantity}x</span>
-                  <span className="font-medium text-gray-900">{item.name}</span>
+                  <span className="font-medium text-gray-900">
+                    {(() => {
+                      // Try to find the item in the menu to get localized name
+                      const menuItem = menu.find(m => m.itemNumber === item.itemNumber);
+                      return menuItem ? getLocalizedName(menuItem) : item.name;
+                    })()}
+                  </span>
                 </div>
                 <span className="font-bold text-gray-900">¥{item.price * item.quantity}</span>
               </div>
@@ -301,7 +476,7 @@ function OrderContent() {
           </div>
           
           <div className="flex justify-between items-center pt-4 border-t-2 border-gray-200 mb-6">
-            <span className="text-lg font-bold text-gray-900">Total</span>
+            <span className="text-lg font-bold text-gray-900">{t.total}</span>
             <span className="text-3xl font-black text-red-600">
               ¥{activeOrder.items.reduce((sum, item) => sum + (item.price * item.quantity), 0)}
             </span>
@@ -311,19 +486,19 @@ function OrderContent() {
           {activeOrder.status === 'NEW' && (
             <button
               onClick={async () => {
-                if (confirm('Cancel this order? You can place a new order after canceling.')) {
+                if (confirm(t.confirmCancel)) {
                   try {
                     await api.delete(`/orders/${activeOrder._id}`);
                     setActiveOrder(null);
-                    alert('Order canceled successfully. You can now place a new order.');
+                    showToast(t.orderCanceled, 'success');
                   } catch (err) {
-                    alert('Failed to cancel order. Please try again.');
+                    showToast(t.failedToCancel, 'error');
                   }
                 }
               }}
               className="w-full bg-red-600 text-white py-3 rounded-xl hover:bg-red-700 transition font-bold"
             >
-              Cancel Order
+              {t.cancelOrder}
             </button>
           )}
         </div>
@@ -338,26 +513,41 @@ function OrderContent() {
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-lg shadow-sm sticky top-0 z-20 border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center gap-3">
             <div>
               <h1 className="text-3xl font-black bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">
                 EasyOne
               </h1>
               <p className="text-sm text-gray-600 font-medium">Table {table}</p>
             </div>
-            {cart.length > 0 && (
-              <button
-                onClick={() => setShowCart(true)}
-                className="relative bg-gradient-to-r from-red-600 to-orange-600 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+            <div className="flex items-center gap-2">
+              <select
+                value={language}
+                onChange={(e) => handleSetLanguage(e.target.value as 'en' | 'ne' | 'ja')}
+                className="bg-white border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 block p-2.5"
               >
-                <span className="font-bold">🛒 Cart ({totalItems})</span>
-                {totalItems > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-yellow-400 text-gray-900 text-xs font-black w-6 h-6 rounded-full flex items-center justify-center animate-bounce">
-                    {totalItems}
-                  </span>
-                )}
-              </button>
-            )}
+                <option value="en">🇺🇸 English</option>
+                <option value="ne">🇳🇵 नेपाली</option>
+                <option value="ja">🇯🇵 日本語</option>
+              </select>
+              <CallStaffButton 
+                tableNumber={parseInt(table!)} 
+                isCalling={!!staffCall}
+              />
+              {cart.length > 0 && (
+                <button
+                  onClick={() => setShowCart(true)}
+                  className="relative bg-gradient-to-r from-red-600 to-orange-600 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+                >
+                  <span className="font-bold">{t.cart} ({totalItems})</span>
+                  {totalItems > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-yellow-400 text-gray-900 text-xs font-black w-6 h-6 rounded-full flex items-center justify-center animate-bounce">
+                      {totalItems}
+                    </span>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         </div>
         
@@ -404,13 +594,13 @@ function OrderContent() {
               )}
               
               <div className="p-4">
-                <h3 className="font-bold text-gray-900 mb-1 line-clamp-2 text-sm">{item.name}</h3>
+                <h3 className="font-bold text-gray-900 mb-1 line-clamp-2 text-sm">{getLocalizedName(item)}</h3>
                 <p className="text-2xl font-black text-red-600 mb-3">¥{item.price}</p>
                 <button
                   onClick={() => addToCart(item, 1)}
                   className="w-full bg-gradient-to-r from-red-600 to-orange-600 text-white py-2.5 rounded-xl hover:shadow-lg transition-all font-bold text-sm transform hover:scale-105"
                 >
-                  Add to Cart
+                  {t.addToCart}
                 </button>
               </div>
             </div>
@@ -424,7 +614,7 @@ function OrderContent() {
           <div className="bg-white rounded-t-3xl md:rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="p-6 border-b border-gray-200">
               <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-black text-gray-900">Your Cart</h2>
+                <h2 className="text-2xl font-black text-gray-900">{t.cart}</h2>
                 <button
                   onClick={() => setShowCart(false)}
                   className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition"
@@ -441,7 +631,7 @@ function OrderContent() {
                     <img src={item.imageUrl} alt={item.name} className="w-16 h-16 rounded-xl object-cover" />
                   )}
                   <div className="flex-1">
-                    <h3 className="font-bold text-gray-900">{item.name}</h3>
+                    <h3 className="font-bold text-gray-900">{getLocalizedName(item)}</h3>
                     <p className="text-sm text-gray-500">¥{item.price} each</p>
                   </div>
                   <div className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 shadow">
@@ -466,21 +656,22 @@ function OrderContent() {
 
             <div className="p-6 border-t border-gray-200 bg-gray-50">
               <div className="flex justify-between items-center mb-4">
-                <span className="text-xl font-bold text-gray-900">Total</span>
+                <span className="text-xl font-bold text-gray-900">{t.total}</span>
                 <span className="text-3xl font-black text-red-600">¥{totalPrice}</span>
               </div>
               <button
                 onClick={handlePlaceOrder}
                 className="w-full bg-gradient-to-r from-red-600 to-orange-600 text-white py-4 rounded-2xl hover:shadow-xl transition-all font-black text-lg transform hover:scale-105"
               >
-                Place Order ({totalItems} items)
+                {t.placeOrder} ({totalItems})
               </button>
             </div>
           </div>
         </div>
       )}
       
-      {isLoading && <LoadingOverlay message="Refreshing your session..." />}
+      {/* Loading overlay handled at top level now, but keeping for other async ops if needed */}
+      {isLoading && <LoadingOverlay message="Processing..." />}
     </div>
   );
 }

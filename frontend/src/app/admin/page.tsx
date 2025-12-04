@@ -16,7 +16,7 @@ export default function AdminDashboard() {
   const [qrCodes, setQrCodes] = useState<{table: number, url: string}[]>([]);
   
   const [newItem, setNewItem] = useState({
-    itemNumber: '', name: '', price: '', category: '', imageUrl: '', prepStation: 'kitchen'
+    itemNumber: '', name: '', name_ne: '', name_ja: '', price: '', category: '', imageUrl: '', prepStation: 'kitchen'
   });
   
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -81,7 +81,7 @@ export default function AdminDashboard() {
     e.preventDefault();
     try {
       await api.post('/menu', newItem);
-      setNewItem({ itemNumber: '', name: '', price: '', category: '', imageUrl: '', prepStation: 'kitchen' });
+      setNewItem({ itemNumber: '', name: '', name_ne: '', name_ja: '', price: '', category: '', imageUrl: '', prepStation: 'kitchen' });
       fetchData();
     } catch (err) {
       alert('Failed to add item');
@@ -100,6 +100,8 @@ export default function AdminDashboard() {
       _id: item._id,
       itemNumber: item.itemNumber.toString(),
       name: item.name,
+      name_ne: item.name_ne || '',
+      name_ja: item.name_ja || '',
       price: item.price.toString(),
       category: item.category,
       imageUrl: item.imageUrl || '',
@@ -114,6 +116,8 @@ export default function AdminDashboard() {
       await api.put(`/menu/${editingItem._id}`, {
         itemNumber: parseInt(editingItem.itemNumber),
         name: editingItem.name,
+        name_ne: editingItem.name_ne,
+        name_ja: editingItem.name_ja,
         price: parseFloat(editingItem.price),
         category: editingItem.category,
         imageUrl: editingItem.imageUrl,
@@ -184,79 +188,145 @@ export default function AdminDashboard() {
           
           {/* Orders Tab */}
           {activeTab === 'orders' && (
-            <div className="space-y-6">
-              <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">EasyOne Admin</h1>
-            <p className="text-sm text-gray-500">Kitchen Management System</p>
-          </div>
-                <span className="text-sm text-gray-500">
-                  {orders.filter(o => o.status !== 'PAID').length} active
-                </span>
+            <div className="space-y-8">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Orders Dashboard</h1>
+                  <p className="text-gray-500 mt-1">Manage and track real-time orders</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="px-4 py-2 bg-white border border-gray-200 rounded-full text-sm font-medium text-gray-600 shadow-sm">
+                    {orders.length} Total
+                  </span>
+                  <span className="px-4 py-2 bg-orange-100 text-orange-700 rounded-full text-sm font-medium shadow-sm ring-1 ring-orange-200">
+                    {orders.filter(o => o.status !== 'PAID').length} Active
+                  </span>
+                </div>
+              </div>
+
+              {/* Orders Summary Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-lg shadow-gray-100/50 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <span className="text-6xl">💰</span>
+                  </div>
+                  <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Today's Revenue</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">
+                    ¥{orders.reduce((sum, order) => {
+                      const orderTotal = order.items.reduce((s: number, i: any) => s + (i.price * i.quantity), 0);
+                      return sum + orderTotal;
+                    }, 0).toLocaleString()}
+                  </p>
+                </div>
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-lg shadow-gray-100/50 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <span className="text-6xl">📝</span>
+                  </div>
+                  <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Orders</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">{orders.length}</p>
+                </div>
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-lg shadow-gray-100/50 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <span className="text-6xl">⏳</span>
+                  </div>
+                  <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Pending Orders</p>
+                  <p className="text-3xl font-bold text-orange-600 mt-2">
+                    {orders.filter(o => o.status !== 'PAID').length}
+                  </p>
+                </div>
               </div>
 
               {orders.length === 0 ? (
-                <div className="bg-white rounded-xl p-12 text-center border border-gray-200">
-                  <p className="text-gray-400">No orders yet</p>
+                <div className="bg-white rounded-2xl p-16 text-center border border-gray-100 shadow-sm">
+                  <div className="text-6xl mb-4">🍽️</div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">No orders yet</h3>
+                  <p className="text-gray-500">New orders will appear here automatically</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {orders.map(order => (
-                    <div key={order._id} className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-md transition">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <div className="flex items-center gap-3 mb-1">
-                            <span className="text-lg font-semibold text-gray-900">Table {order.tableNumber}</span>
-                            <span className={`text-xs font-medium px-3 py-1 rounded-full ${
-                              order.status === 'NEW' ? 'bg-yellow-100 text-yellow-800' :
-                              order.status === 'COOKING' ? 'bg-orange-100 text-orange-800' :
-                              order.status === 'READY' ? 'bg-green-100 text-green-800' :
-                              'bg-gray-100 text-gray-600'
-                            }`}>
-                              {order.status}
-                            </span>
+                <div className="grid grid-cols-1 gap-6">
+                  {orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(order => (
+                    <div key={order._id} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200">
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-6 border-b border-gray-100">
+                        <div className="flex items-center gap-4">
+                          <div className="bg-blue-50 w-12 h-12 rounded-xl flex items-center justify-center text-blue-600 font-bold text-lg">
+                            {order.tableNumber}
                           </div>
-                          <p className="text-sm text-gray-500">
-                            {new Date(order.createdAt).toLocaleString()}
-                          </p>
+                          <div>
+                            <div className="flex items-center gap-3">
+                              <h3 className="text-lg font-bold text-gray-900">Table {order.tableNumber}</h3>
+                              <span className={`px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase ${
+                                order.status === 'NEW' ? 'bg-yellow-100 text-yellow-700 ring-1 ring-yellow-200' :
+                                order.status === 'COOKING' ? 'bg-orange-100 text-orange-700 ring-1 ring-orange-200' :
+                                order.status === 'READY' ? 'bg-green-100 text-green-700 ring-1 ring-green-200' :
+                                'bg-gray-100 text-gray-600 ring-1 ring-gray-200'
+                              }`}>
+                                {order.status}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-500 mt-1 flex items-center gap-2">
+                              <span>🕒 {new Date(order.createdAt).toLocaleTimeString()}</span>
+                              <span className="text-gray-300">•</span>
+                              <span>📅 {new Date(order.createdAt).toLocaleDateString()}</span>
+                            </p>
+                          </div>
                         </div>
                         
-                        {order.status !== 'PAID' && (
-                          <div className="flex gap-2">
-                            {order.status === 'NEW' && (
-                              <button 
-                                onClick={() => updateStatus(order._id, 'COOKING')} 
-                                className="px-4 py-2 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition"
-                              >
-                                Start Cooking
-                              </button>
-                            )}
-                            {order.status === 'COOKING' && (
-                              <button 
-                                onClick={() => updateStatus(order._id, 'READY')} 
-                                className="px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition"
-                              >
-                                Mark Ready
-                              </button>
-                            )}
-                            <button 
-                              onClick={() => updateStatus(order._id, 'PAID')} 
-                              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition"
-                            >
-                              Mark Paid
-                            </button>
-                          </div>
-                        )}
+                        <div className="text-right">
+                          <p className="text-2xl font-bold text-gray-900">
+                            ¥{order.items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0).toLocaleString()}
+                          </p>
+                          <p className="text-sm text-gray-500 font-medium">{order.items.reduce((sum: number, item: any) => sum + item.quantity, 0)} items total</p>
+                        </div>
                       </div>
+                      
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2">
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Order Items</p>
+                          <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                            {order.items.map((item: any, idx: number) => (
+                              <div key={idx} className="flex justify-between items-center text-sm group">
+                                <div className="flex items-center gap-3">
+                                  <span className="bg-white w-6 h-6 rounded-md flex items-center justify-center font-bold text-gray-700 shadow-sm border border-gray-100">
+                                    {item.quantity}
+                                  </span>
+                                  <span className="font-medium text-gray-900">{item.name}</span>
+                                </div>
+                                <span className="text-gray-600 font-medium tabular-nums">
+                                  ¥{(item.price * item.quantity).toLocaleString()}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
 
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <p className="text-xs font-medium text-gray-500 mb-2">Items:</p>
-                        <div className="space-y-1">
-                          {order.items.map((item: any, idx: number) => (
-                            <div key={idx} className="text-sm text-gray-700">
-                              <span className="font-medium">{item.quantity}x</span> {item.name}
-                            </div>
-                          ))}
+                        <div className="flex flex-col justify-end gap-3">
+                          {order.status === 'NEW' && (
+                            <button 
+                              onClick={() => updateStatus(order._id, 'COOKING')} 
+                              className="w-full py-3 bg-orange-500 text-white font-semibold rounded-xl hover:bg-orange-600 active:scale-95 transition shadow-lg shadow-orange-200"
+                            >
+                              Start Cooking 🔥
+                            </button>
+                          )}
+                          {order.status === 'COOKING' && (
+                            <button 
+                              onClick={() => updateStatus(order._id, 'READY')} 
+                              className="w-full py-3 bg-green-500 text-white font-semibold rounded-xl hover:bg-green-600 active:scale-95 transition shadow-lg shadow-green-200"
+                            >
+                              Mark Ready ✅
+                            </button>
+                          )}
+                          <button 
+                            onClick={() => updateStatus(order._id, 'PAID')} 
+                            className={`w-full py-3 font-semibold rounded-xl transition active:scale-95 ${
+                              order.status === 'PAID' 
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200'
+                            }`}
+                            disabled={order.status === 'PAID'}
+                          >
+                            {order.status === 'PAID' ? 'Paid' : 'Mark as Paid 💳'}
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -275,7 +345,9 @@ export default function AdminDashboard() {
                 <h3 className="text-sm font-semibold text-gray-700 mb-4">Add New Item</h3>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <input placeholder="Item Number" className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={newItem.itemNumber} onChange={e => setNewItem({...newItem, itemNumber: e.target.value})} required />
-                  <input placeholder="Name" className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} required />
+                  <input placeholder="Name (English)" className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} required />
+                  <input placeholder="Name (Nepali)" className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={newItem.name_ne} onChange={e => setNewItem({...newItem, name_ne: e.target.value})} />
+                  <input placeholder="Name (Japanese)" className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={newItem.name_ja} onChange={e => setNewItem({...newItem, name_ja: e.target.value})} />
                   <input placeholder="Price (¥)" type="number" className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={newItem.price} onChange={e => setNewItem({...newItem, price: e.target.value})} required />
                   <input placeholder="Category" className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})} required />
                   <input placeholder="Image URL (optional)" className="border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value={newItem.imageUrl} onChange={e => setNewItem({...newItem, imageUrl: e.target.value})} />
@@ -327,40 +399,118 @@ export default function AdminDashboard() {
 
           {/* Analytics Tab */}
           {activeTab === 'analytics' && analytics && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900">Analytics</h2>
-              
-              <div className="grid grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl p-8 border border-gray-200 text-center">
-                  <p className="text-sm text-gray-500 mb-2">Total Orders</p>
-                  <p className="text-5xl font-bold text-gray-900">{analytics.ordersCount}</p>
-                </div>
-                <div className="bg-white rounded-xl p-8 border border-gray-200 text-center">
-                  <p className="text-sm text-gray-500 mb-2">Total Revenue</p>
-                  <p className="text-5xl font-bold text-blue-600">¥{analytics.totalRevenue}</p>
+            <div className="space-y-8 animate-in fade-in duration-500">
+              <div>
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">Analytics Overview</h2>
+                <p className="text-gray-500 mb-8">Performance metrics for today</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-3xl p-8 text-white shadow-xl shadow-blue-200 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl"></div>
+                    <div className="relative z-10">
+                      <div className="flex justify-between items-start mb-6">
+                        <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
+                          <span className="text-3xl">💰</span>
+                        </div>
+                        <span className="text-xs font-bold bg-white/20 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">TODAY</span>
+                      </div>
+                      <p className="text-blue-100 text-sm font-medium mb-1 uppercase tracking-wider">Total Revenue</p>
+                      <p className="text-5xl font-bold tracking-tight">¥{analytics.totalRevenue.toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-3xl p-8 text-white shadow-xl shadow-purple-200 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl"></div>
+                    <div className="relative z-10">
+                      <div className="flex justify-between items-start mb-6">
+                        <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
+                          <span className="text-3xl">📝</span>
+                        </div>
+                        <span className="text-xs font-bold bg-white/20 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">TODAY</span>
+                      </div>
+                      <p className="text-purple-100 text-sm font-medium mb-1 uppercase tracking-wider">Total Orders</p>
+                      <p className="text-5xl font-bold tracking-tight">{analytics.ordersCount}</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-3xl p-8 text-white shadow-xl shadow-orange-200 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl"></div>
+                    <div className="relative z-10">
+                      <div className="flex justify-between items-start mb-6">
+                        <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
+                          <span className="text-3xl">🔥</span>
+                        </div>
+                        <span className="text-xs font-bold bg-white/20 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">TOP ITEM</span>
+                      </div>
+                      <p className="text-orange-100 text-sm font-medium mb-1 uppercase tracking-wider">Most Popular</p>
+                      <p className="text-3xl font-bold truncate leading-tight">
+                        {analytics.mostOrdered[0]?.name || 'N/A'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="font-semibold text-gray-900">Most Ordered Items</h3>
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-100/50 overflow-hidden">
+                <div className="px-8 py-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">Top Selling Items</h3>
+                    <p className="text-sm text-gray-500 mt-1">Best performing menu items</p>
+                  </div>
                 </div>
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item Name</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Quantity Sold</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {analytics.mostOrdered.map((item: any, idx: number) => (
-                      <tr key={idx} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 text-sm text-gray-900">{item.name}</td>
-                        <td className="px-6 py-4 text-sm text-gray-900 text-right font-semibold">{item.count}</td>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50/50">
+                      <tr>
+                        <th className="px-8 py-5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Rank</th>
+                        <th className="px-8 py-5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Item Name</th>
+                        <th className="px-8 py-5 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Orders</th>
+                        <th className="px-8 py-5 text-left text-xs font-bold text-gray-400 uppercase tracking-wider pl-12">Popularity</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {analytics.mostOrdered.map((item: any, idx: number) => {
+                        const percentage = Math.round((item.count / analytics.ordersCount) * 100);
+                        return (
+                          <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
+                            <td className="px-8 py-5 whitespace-nowrap">
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shadow-sm ${
+                                idx === 0 ? 'bg-yellow-100 text-yellow-700 ring-4 ring-yellow-50' :
+                                idx === 1 ? 'bg-gray-100 text-gray-700 ring-4 ring-gray-50' :
+                                idx === 2 ? 'bg-orange-100 text-orange-700 ring-4 ring-orange-50' : 
+                                'bg-white text-gray-500 border border-gray-200'
+                              }`}>
+                                #{idx + 1}
+                              </div>
+                            </td>
+                            <td className="px-8 py-5 whitespace-nowrap">
+                              <span className="text-base font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{item.name}</span>
+                            </td>
+                            <td className="px-8 py-5 whitespace-nowrap text-right">
+                              <span className="text-base font-bold text-gray-900">{item.count}</span>
+                              <span className="text-xs text-gray-400 ml-1">orders</span>
+                            </td>
+                            <td className="px-8 py-5 whitespace-nowrap pl-12">
+                              <div className="flex items-center gap-4">
+                                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden w-32">
+                                  <div 
+                                    className={`h-full rounded-full ${
+                                      idx === 0 ? 'bg-yellow-400' :
+                                      idx === 1 ? 'bg-gray-400' :
+                                      idx === 2 ? 'bg-orange-400' : 'bg-blue-500'
+                                    }`}
+                                    style={{ width: `${percentage}%` }}
+                                  ></div>
+                                </div>
+                                <span className="text-sm font-medium text-gray-600 w-12">{percentage}%</span>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
@@ -427,13 +577,31 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Name (English)</label>
                   <input 
                     type="text"
                     className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
                     value={editingItem.name} 
                     onChange={e => setEditingItem({...editingItem, name: e.target.value})} 
                     required 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Name (Nepali)</label>
+                  <input 
+                    type="text"
+                    className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    value={editingItem.name_ne} 
+                    onChange={e => setEditingItem({...editingItem, name_ne: e.target.value})} 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Name (Japanese)</label>
+                  <input 
+                    type="text"
+                    className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    value={editingItem.name_ja} 
+                    onChange={e => setEditingItem({...editingItem, name_ja: e.target.value})} 
                   />
                 </div>
                 <div>

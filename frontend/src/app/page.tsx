@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import io from 'socket.io-client';
+import StaffCallsPanel from '@/components/StaffCallsPanel';
 
 const socket = io(process.env.NEXT_PUBLIC_BACKEND_URL?.replace('/api', '') || 'http://localhost:5000');
 
@@ -82,7 +83,7 @@ export default function Home() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-5xl font-black text-gray-900 mb-3">🍽️ Saizeriya Kitchen</h1>
+          <h1 className="text-5xl font-black text-gray-900 mb-3">🍽️ EasyOne</h1>
           <p className="text-xl text-gray-600">Restaurant Order Management System</p>
         </div>
 
@@ -115,9 +116,13 @@ export default function Home() {
           >
             <div className="text-5xl mb-4">💰</div>
             <h2 className="text-2xl font-bold mb-2">POS System</h2>
-            <p className="text-green-100">Process payments & checkout</p>
+            {/* <p className="text-green-100">Process payments & checkout</p> */}
+            <p className="text-green-100">Comming Soon...</p>
           </a>
         </div>
+
+        {/* Staff Calls Panel */}
+        <StaffCallsPanel />
 
         {/* Table Links */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
@@ -180,16 +185,12 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="text-center mt-12 text-gray-500">
-          <p className="text-sm">
-            Built with Next.js, Express, MongoDB & Socket.IO
-          </p>
+       
           <p className="text-xs mt-2">
             Session-based table reservation system with real-time updates
           </p>
         </div>
-      </div>
+      
     </main>
   );
 }
