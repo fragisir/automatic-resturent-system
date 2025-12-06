@@ -49,8 +49,11 @@ export default function AdminLogin() {
           >
             Login
           </button>
+          <p className="text-xs text-gray-500 mt-1">ID: admin</p>
+          <p className="text-xs text-gray-500 mt-1">Password: admin123</p>
         </form>
       </div>
+      
     </div>
   );
 }

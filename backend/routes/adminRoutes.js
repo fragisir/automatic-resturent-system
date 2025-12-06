@@ -36,7 +36,6 @@ router.get('/analytics', async (req, res) => {
 
     const mostOrdered = Object.entries(itemCounts)
       .sort(([, a], [, b]) => b - a)
-      .slice(0, 5)
       .map(([name, count]) => ({ name, count }));
 
     res.json({
