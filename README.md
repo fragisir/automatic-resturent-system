@@ -20,7 +20,7 @@ where you can see all the order and you can aprove the order by click on cooking
 you can run backend
 cd backend (http://localhost:5000)
 npm run dev (make sure you have mongodb running in your system)
-
+front
 frontend
 cd frontend (http://localhost:3000)
 npm run dev
