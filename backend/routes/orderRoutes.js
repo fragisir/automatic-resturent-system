@@ -154,12 +154,10 @@ router.post("/", async (req, res) => {
     });
 
     if (existingOrder) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Table is already occupied. Please wait for the bill to be paid.",
-        });
+      return res.status(400).json({
+        message:
+          "Table is already occupied. Please wait for the bill to be paid.",
+      });
     }
 
     const order = new Order({
@@ -223,11 +221,9 @@ router.delete("/:id", async (req, res) => {
 
     // Only allow canceling NEW orders
     if (order.status !== "NEW") {
-      return res
-        .status(400)
-        .json({
-          message: "Cannot cancel order that is already being prepared",
-        });
+      return res.status(400).json({
+        message: "Cannot cancel order that is already being prepared",
+      });
     }
 
     // Delete the order
@@ -310,7 +306,7 @@ router.post("/refresh-token", async (req, res) => {
 router.delete("/sessions/clear-all", async (req, res) => {
   try {
     await Session.deleteMany({});
-    res.json({ message: "All sessions cleared successfully" });
+    res.json({ message: "All sessions cleared successfully " });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
