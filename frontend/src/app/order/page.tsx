@@ -488,7 +488,7 @@ function OrderContent() {
         <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md">
           <div className="text-center mb-8">
             <div className="w-20 h-20 bg-gradient-to-br from-red-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <span className="text-4xl">🍽️</span>
+              <span className="text-4xl">🍽️ </span>
             </div>
             <h1 className="text-3xl font-black text-gray-900 mb-2">
               Table {table}
@@ -781,7 +781,7 @@ function OrderContent() {
         </div>
       )}
 
-      {/* Loading overlay handled at top level now, but keeping for other async ops if needed */}
+      {/* Loading overlay handled at top level now, but keeping for other async ops if needed  not use now*/}
       {isLoading && <LoadingOverlay message="Processing..." />}
     </div>
   );
