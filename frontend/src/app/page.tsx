@@ -36,7 +36,7 @@ export default function Home() {
 
     fetchOrders();
 
-    // Poll every 5 seconds
+    // Poll every 5 seconds to update orders
     const interval = setInterval(fetchOrders, 5000);
 
     // Socket listeners for real-time updates
