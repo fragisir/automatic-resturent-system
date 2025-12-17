@@ -58,6 +58,8 @@ export default function CallStaffButton({ tableNumber, isCalling, onCallCreated 
     }
   };
 
+  // format time
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
