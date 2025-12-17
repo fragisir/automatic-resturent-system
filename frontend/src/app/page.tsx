@@ -67,7 +67,7 @@ export default function Home() {
         });
       }
     });
-
+ // cleanup
     return () => {
       clearInterval(interval);
       socket.off("connect");
