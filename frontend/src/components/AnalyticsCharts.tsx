@@ -10,6 +10,7 @@ interface AnalyticsChartsProps {
   analytics: any;
   orders: any[];
 }
+// hourly data for revenue trend
 
 export default function AnalyticsCharts({ analytics, orders }: AnalyticsChartsProps) {
   // Process hourly data for revenue trend
