@@ -306,7 +306,7 @@ router.post("/refresh-token", async (req, res) => {
 router.delete("/sessions/clear-all", async (req, res) => {
   try {
     await Session.deleteMany({});
-    res.json({ message: "All sessions cleared successfully " });
+    res.json({ message: "All sessions cleared successfully" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

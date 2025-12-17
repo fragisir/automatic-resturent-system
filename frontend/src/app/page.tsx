@@ -6,7 +6,7 @@ import StaffCallsPanel from "@/components/StaffCallsPanel";
 
 const socket = io(
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace("/api", "") ||
-    "http://localhost:5000"
+    "http://localhost:5000" //change to your backend url
 );
 
 interface Order {
