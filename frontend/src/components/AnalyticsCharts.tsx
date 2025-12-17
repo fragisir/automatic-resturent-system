@@ -20,7 +20,7 @@ export default function AnalyticsCharts({ analytics, orders }: AnalyticsChartsPr
       orders: 0,
       revenue: 0
     }));
-
+ // calculate hourly data for revenue trend
     orders.forEach(order => {
       const hour = new Date(order.createdAt).getHours();
       hours[hour].orders += 1;
