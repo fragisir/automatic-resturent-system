@@ -15,6 +15,7 @@ interface Order {
   status: "NEW" | "COOKING" | "READY" | "PAID";
 }
 
+// table length
 export default function Home() {
   const tables = Array.from({ length: 20 }, (_, i) => i + 1);
   const [activeOrders, setActiveOrders] = useState<Order[]>([]);
